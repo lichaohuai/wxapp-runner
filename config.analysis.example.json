@@ -1,0 +1,11 @@
+{
+  "analysis": {
+    "enabled": true,
+    "cryptoTap": true,
+    "defeatAntiHook": false,
+    "ttlMs": 120000,
+    "capacity": 300,
+    "captureBytes": 4096,
+    "taps": []
+  }
+}

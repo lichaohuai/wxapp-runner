@@ -1,0 +1,36 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import http from 'node:http';
+import assert from 'node:assert/strict';
+import {componentFixture} from './component-fixture.mjs';
+import {managedFixture,until} from './managed-test-runtime.mjs';
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'wxapp-analysis-'));
+const server=http.createServer(async(req,res)=>{const chunks=[];for await(const c of req)chunks.push(c);const data=JSON.parse(Buffer.concat(chunks));res.setHeader('content-type','application/json');res.end(JSON.stringify({message:data.message,sign:data.sign,large:'中'.repeat(5000)}));});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const endpoint=`http://127.0.0.1:${server.address().port}/signed`;
+let t;
+try{
+  const pkg=componentFixture(root,'glass-easel');
+  fs.appendFileSync(path.join(pkg,'app-service.js'),`\ndefine('utils/utils.js',function(require,module,exports){exports.getSign=function getSign(content){return '签名:'+content;};exports.request=function(content){return new Promise(resolve=>wx.request({url:${JSON.stringify(endpoint)},method:'POST',data:{message:content,sign:exports.getSign(content)},success:r=>resolve(r.data)}));};});getApp().utils=require('utils/utils.js');\ndefine('utils/unloaded.js',function(require,module,exports){globalThis.unloadedFactoryRan=true;exports.f=()=>1;});\n`);
+  t=await managedFixture({packageDir:pkg});const call=t.call;
+  const list=await call('runner_source',{action:'list',limit:200});assert.ok(list.modules.some(m=>m.path==='utils/utils.js'));
+  const source=await call('runner_source',{action:'get',path:'utils/utils.js'});assert.ok(source.source.includes('getSign'));
+  const current=await t.client.callTool({name:'runner_source',arguments:{action:'get',path:'utils/utils.js',current:true}});assert.equal(current.isError,true);assert.match(current.content[0].text,/CURRENT_FACTORY_UNAVAILABLE/);
+  const search=await call('runner_source',{action:'search',q:'getSign'});assert.ok(search.matches.some(m=>m.path==='utils/utils.js'));
+  const location=await call('runner_source',{action:'locate',target:'getApp().utils.getSign'});assert.equal(location.found,true);assert.ok(location.column>1);assert.ok(location.modules.some(m=>m.path==='utils/utils.js'),JSON.stringify(location));
+  const hook=await call('runner_hook',{target:{module:'utils/utils.js',export:'getSign'},capture:['args','return','stack'],count:2,when:'args[0].length > 0',ttlMs:5000});
+  await call('runner_evaluate',{expression:"getApp().utils.request('原像A😀')",awaitPromise:true});await call('runner_evaluate',{expression:"getApp().utils.request('原像B😀')",awaitPromise:true});
+  const trace=await call('runner_hook',{action:'read',hookId:hook.hookId});assert.equal(trace.entries.length,2);assert.equal(trace.restore,'restored');assert.equal(trace.entries[0].args[0],'原像A😀');assert.equal(trace.entries[0].return,'签名:原像A😀');
+  const other=await t.newClient();await t.callAs(other,'runner_control',{action:'acquire'});assert.equal((await call('runner_hook',{action:'read',hookId:hook.hookId})).entries.length,2);await t.callAs(other,'runner_control',{action:'release'});
+  const fail=await t.client.callTool({name:'runner_hook',arguments:{target:{module:'utils/unloaded.js',export:'f'}}});assert.equal(fail.isError,true);assert.match(fail.content[0].text,/MODULE_LOAD_STATE_UNKNOWN/);
+  assert.equal((await call('runner_evaluate',{expression:'typeof globalThis.unloadedFactoryRan'})).result.value,'undefined');
+  const network=await until(async()=>{const r=await call('runner_network',{after:0,filter:{urlIncludes:'/signed',bodyIncludes:'sign',source:'logic'},fields:['id','cursor','url','method','status']});return r.entries.length===2&&r.entries.every(e=>e.status===200)&&r;});
+  assert.ok(JSON.stringify(network).length<3000);const [a,b]=network.entries;
+  const body=await call('runner_network',{id:a.id});assert.equal(body.responseBodyPreview.truncated,true);assert.ok(body.responseArtifactId);assert.equal(body.requestBodyPreview.parsed.message,'原像A😀');
+  const artifact=await call('runner_artifact',{action:'read',id:body.responseArtifactId,length:30000});assert.equal(JSON.parse(Buffer.from(artifact.data,'base64')).large.length,5000);
+  const diff=await call('runner_network',{action:'diff',idA:a.id,idB:b.id});assert.ok(diff.changes.some(c=>c.path==='/body/sign'));
+  const second=await call('runner_network',{id:a.id});assert.equal(second.responseBody,body.responseBody);
+  await call('runner_debugger',{action:'open'});const debug=await until(()=>t.app.windows().find(w=>w.url().includes('js_app.html')));await debug.getByRole('tab',{name:'Wxapp',exact:true}).click();
+  const section=debug.getByRole('combobox',{name:'Wxapp section'});await section.selectOption({label:'模块源码'});await debug.getByText('utils/utils.js',{exact:false}).first().waitFor();await section.selectOption({label:'函数 Hook'});await debug.getByText(hook.hookId,{exact:false}).first().waitFor();
+  const result={passed:true,platform:process.platform,standardMcp:true,realBaselib:true,moduleCacheWithoutInitialization:true,moduleSource:true,v8SymbolLocation:true,conditionalHookCapturedOriginalInputAndReturn:true,automaticRestore:true,networkFilterAndProjection:true,parsedPreviewAndArtifact:true,requestDiff:true,repeatableBodies:true,nativePanel:true};fs.writeFileSync('docs/analysis-result.json',JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));
+}finally{await t?.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}

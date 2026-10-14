@@ -1,0 +1,7 @@
+WxappRunner
+Copyright 2026 WxappRunner contributors
+
+This project is licensed under the Apache License, Version 2.0.
+Third-party dependencies retain their own licenses. See THIRD_PARTY_NOTICES.md.
+WeChat base libraries, third-party mini-program packages and private gateway services
+are not included in this source distribution.

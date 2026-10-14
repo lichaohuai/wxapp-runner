@@ -1,0 +1,36 @@
+appId: cc.wxapprunner.app
+productName: WxappRunner
+copyright: Copyright © 2026
+directories:
+  output: release
+  buildResources: build
+# The runtime bundles everything it needs into dist/ via esbuild; only
+# @napi-rs/canvas is left external (a native prebuilt). dist/native/ is a
+# macOS-only Swift location helper and must NOT ship in the Windows build.
+files:
+  - dist/**/*
+  - "!dist/native/**"
+  - package.json
+  - node_modules/@napi-rs/canvas-win32-x64-msvc/**
+# Closed-source base libraries must be supplied separately by the user.
+# Public installers do not redistribute them. Use --baselib PATH at launch.
+asar: true
+# Everything is prebuilt/esbuild-bundled; never let the packer re-run npm
+# (that would re-resolve optional deps and prune the win32 canvas prebuilt).
+npmRebuild: false
+# Native .node binaries cannot be loaded from inside the asar archive.
+asarUnpack:
+  - "**/node_modules/@napi-rs/canvas*/**"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  shortcutName: WxappRunner
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

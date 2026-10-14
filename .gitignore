@@ -1,0 +1,29 @@
+node_modules/
+dist/
+release/
+.local/
+.env
+*.log
+.DS_Store
+
+# Public source boundary
+.env.*
+!.env.example
+user-data/
+data-exports/
+baselib/
+package-*/
+*.wxapkg
+*.wxvpkg
+docs/re-data/
+docs/evidence/
+*.har
+*.heapsnapshot
+
+# Local generated contract inventories
+docs/official-native-registry.json
+docs/native-contracts.json
+docs/native-contracts.md
+docs/native-contracts-unresolved.json
+docs/native-contracts-queue.json
+docs/*-result.json

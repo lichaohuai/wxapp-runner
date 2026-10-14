@@ -1,0 +1,17 @@
+{
+  "wxbot": "https://your-wxbot.example",
+  "deviceId": "YOUR_DEVICE_ID",
+  "appKey": "YOUR_APP_KEY",
+  "appSecret": "YOUR_APP_SECRET",
+  "debug": {
+    "eventLimit": 10000,
+    "requestLimit": 1000,
+    "previewBytes": 262144,
+    "bodyLimit": 67108864,
+    "totalBodyLimit": 536870912
+  },
+  "map": {
+    "tileUrl": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "attribution": "© OpenStreetMap"
+  }
+}

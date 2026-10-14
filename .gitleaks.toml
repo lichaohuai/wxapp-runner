@@ -1,0 +1,8 @@
+title = "WxappRunner source publication"
+[extend]
+useDefault = true
+[[rules]]
+id = "wechat-appid-literal"
+description = "Do not publish application identifiers; use placeholders or generated synthetic test data"
+regex = '''(?i)wx[0-9a-f]{16}'''
+keywords = ["wx"]

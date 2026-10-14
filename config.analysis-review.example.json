@@ -1,0 +1,24 @@
+{
+  "analysis": {
+    "enabled": true,
+    "networkMode": "local-only",
+    "defeatAntiHook": true,
+    "cryptoTap": true,
+    "ttlMs": 300000,
+    "capacity": 2000,
+    "captureBytes": 4096,
+    "execution": {
+      "enabled": true,
+      "files": ["app-service.js"],
+      "modules": ["app.js", "utils/util.js"],
+      "capacity": 100000,
+      "maxEvents": 100000,
+      "valueLimit": 4096
+    },
+    "taps": [
+      {"target":"String.prototype.charCodeAt","scope":"armed","count":1000},
+      {"target":"String.fromCharCode","scope":"armed","count":1000},
+      {"target":"encodeURIComponent","scope":"armed","count":1000}
+    ]
+  }
+}

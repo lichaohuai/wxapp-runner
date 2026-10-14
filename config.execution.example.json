@@ -1,0 +1,19 @@
+{
+  "analysis": {
+    "enabled": true,
+    "cryptoTap": true,
+    "defeatAntiHook": false,
+    "ttlMs": 120000,
+    "capacity": 1000,
+    "captureBytes": 4096,
+    "execution": {
+      "enabled": true,
+      "files": ["app-service.js"],
+      "modules": [],
+      "capacity": 50000,
+      "maxEvents": 50000,
+      "ttlMs": 60000,
+      "valueLimit": 1024
+    }
+  }
+}
